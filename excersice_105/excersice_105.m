@@ -1,164 +1,117 @@
-m_g = [50; 100; 150; 200; 250; 300; 350; 400; 450; 500];
+% Skrypt do obliczania Modułu Younga (E)
+% oraz jego całkowitej niepewności (Delta_E)
 
-copper_1_mm = [0.56; 1.05; 1.63; 2.19; 2.74; 3.32; 3.83; 4.46; 5.00; 5.57];
-copper_2_mm = [0.62; 1.18; 1.76; 2.33; 2.83; 3.41; 4.00; 4.61; 5.15; 5.74];
-copper_3_mm = [0.48; 0.91; 1.33; 1.75; 2.18; 2.62; 3.04; 3.46; 3.91; 4.34];
+clc;    % Wyczyść okno poleceń
+clear;  % Wyczyść zmienne
+close all; % Zamknij wszystkie rysunki
 
-aluminium_1_mm = [0.57; 1.14; 1.65; 2.21; 2.77; 3.30; 3.87; 4.43; 5.00; 5.54];
-aluminium_2_mm = [0.77; 1.42; 2.07; 2.73; 3.31; 4.02; 4.64; 5.29; 5.96; 6.63];
+% -------------------------------------------------------------------------
+% SEKCJA 1: STAŁE I ZAŁOŻENIA DOTYCZĄCE BŁĘDÓW POMIAROWYCH
+% -------------------------------------------------------------------------
 
-brass_1_mm = [0.57; 1.07; 1.58; 2.08; 2.59; 3.10; 3.62; 4.13; 4.64; 5.15];
-brass_2_mm = [0.78; 1.50; 2.19; 2.97; 3.68; 4.40; 5.16; 5.83; 6.61; 7.28];
+% Długość między podporami [m]
+l = 0.602; 
 
-g = 9.81;
-m_kg = m_g / 1000;
-F_g = m_kg * g;
+% ZAŁOŻENIA dotyczące niepewności instrumentalnych [m]
+% !!! ZMIEŃ TE WARTOŚCI, jeśli znasz dokładne niepewności przyrządów !!!
 
-p_c1 = polyfit(F_g, copper_1_mm, 1);
-a_c1 = p_c1(1);
-y_c1_fit = polyval(p_c1, F_g);
-str_c1 = sprintf('I_C: y = %.4fx + %.4f', a_c1, p_c1(2));
+% Niepewność pomiaru długości 'l' (np. linijka z podziałką 1mm)
+delta_l = 0.001; % Założenie: +/- 1 mm
 
-p_c2 = polyfit(F_g, copper_2_mm, 1);
-a_c2 = p_c2(1);
-y_c2_fit = polyval(p_c2, F_g);
-str_c2 = sprintf('II_C: y = %.4fx + %.4f', a_c2, p_c2(2));
+% Niepewność pomiaru szerokości 'b' (np. suwmiarka z noniuszem)
+delta_b = 0.00005; % Założenie: +/- 0.05 mm
 
-p_c3 = polyfit(F_g, copper_3_mm, 1);
-a_c3 = p_c3(1);
-y_c3_fit = polyval(p_c3, F_g);
-str_c3 = sprintf('III_C: y = %.4fx + %.4f', a_c3, p_c3(2));
+% Niepewność pomiaru wysokości 'h' (np. śruba mikrometryczna)
+delta_h = 0.00001; % Założenie: +/- 0.01 mm
 
-figure;
-hold on;
-plot(F_g, copper_1_mm, 'ro', 'MarkerFaceColor', 'r');
-plot(F_g, y_c1_fit, 'r-');
+fprintf('Założone niepewności instrumentalne:\n');
+fprintf('Delta_l = %.4f m (%.1f mm)\n', delta_l, delta_l*1000);
+fprintf('Delta_b = %.5f m (%.2f mm)\n', delta_b, delta_b*1000);
+fprintf('Delta_h = %.5f m (%.2f mm)\n\n', delta_h, delta_h*1000);
 
-plot(F_g, copper_2_mm, 'go', 'MarkerFaceColor', 'g');
-plot(F_g, y_c2_fit, 'g-');
 
-plot(F_g, copper_3_mm, 'bo', 'MarkerFaceColor', 'b');
-plot(F_g, y_c3_fit, 'b-');
+% -------------------------------------------------------------------------
+% SEKCJA 2: DANE WEJŚCIOWE Z TABEL (BELKI 1-7)
+% -------------------------------------------------------------------------
 
-title('Copper Deflection vs. Force');
-xlabel('Force (N)');
-ylabel('Deflection (mm)');
-legend(str_c1, '', str_c2, '', str_c3, '', 'Location', 'northwest');
-grid on;
-hold off;
-saveas(gcf, 'excersice_105_copper.png');
+% Nazwy belek
+bar_names = {'I_C', 'II_C', 'III_C', 'IV_A', 'V_A', 'VI_B', 'VII_B'};
 
-p_a1 = polyfit(F_g, aluminium_1_mm, 1);
-a_a1 = p_a1(1);
-y_a1_fit = polyval(p_a1, F_g);
-str_a1 = sprintf('IV_A: y = %.4fx + %.4f', a_a1, p_a1(2));
+% Wymiary belek [m] (z Tabeli 3)
+b_vals = [0.015, 0.015, 0.020, 0.010, 0.021, 0.020, 0.015];
+h_vals = [0.0003, 0.0003, 0.0003, 0.0004, 0.0003, 0.0003, 0.0003];
 
-p_a2 = polyfit(F_g, aluminium_2_mm, 1);
-a_a2 = p_a2(1);
-y_a2_fit = polyval(p_a2, F_g);
-str_a2 = sprintf('V_A: y = %.4fx + %.4f', a_a2, p_a2(2));
+% Współczynniki regresji 'a_reg' [mm/N] (z Tabeli 2)
+a_reg_mm_N = [1.1416, 1.1579, 0.8736, 1.1264, 1.3228, 1.0390, 1.4798];
 
-figure;
-hold on;
-plot(F_g, aluminium_1_mm, 'ro', 'MarkerFaceColor', 'r');
-plot(F_g, y_a1_fit, 'r-');
+% Błędy standardowe 'delta_a_reg' [mm/N] (z poprzedniego skryptu)
+delta_a_reg_mm_N = [0.00607, 0.00615, 0.00198, 0.00364, 0.00525, 0.00148, 0.00550];
 
-plot(F_g, aluminium_2_mm, 'bo', 'MarkerFaceColor', 'b');
-plot(F_g, y_a2_fit, 'b-');
+% KONWERSJA JEDNOSTEK do SI (metry i Newtony)
+a_reg_m_N = a_reg_mm_N / 1000;         % [mm/N] -> [m/N]
+delta_a_reg_m_N = delta_a_reg_mm_N / 1000; % [mm/N] -> [m/N]
 
-title('Aluminium Deflection vs. Force');
-xlabel('Force (N)');
-ylabel('Deflection (mm)');
-legend(str_a1, '', str_a2, '', 'Location', 'northwest');
-grid on;
-hold off;
-saveas(gcf, 'excersice_105_aluminium.png');
 
-p_b1 = polyfit(F_g, brass_1_mm, 1);
-a_b1 = p_b1(1);
-y_b1_fit = polyval(p_b1, F_g);
-str_b1 = sprintf('VI_B: y = %.4fx + %.4f', a_b1, p_b1(2));
+% -------------------------------------------------------------------------
+% SEKCJA 3: OBLICZENIA MODUŁU I BŁĘDU
+% -------------------------------------------------------------------------
 
-p_b2 = polyfit(F_g, brass_2_mm, 1);
-a_b2 = p_b2(1);
-y_b2_fit = polyval(p_b2, F_g);
-str_b2 = sprintf('VII_B: y = %.4fx + %.4f', a_b2, p_b2(2));
+% Przygotowanie tabeli na wyniki
+num_bars = length(bar_names);
+E_vals_GPa = zeros(num_bars, 1);
+delta_E_vals_GPa = zeros(num_bars, 1);
 
-figure;
-hold on;
-plot(F_g, brass_1_mm, 'ro', 'MarkerFaceColor', 'r');
-plot(F_g, y_b1_fit, 'r-');
+% Pętla przez wszystkie belki
+for i = 1:num_bars
+    
+    % Pobranie danych dla bieżącej belki
+    b = b_vals(i);
+    h = h_vals(i);
+    a_reg = a_reg_m_N(i);
+    delta_a_reg = delta_a_reg_m_N(i);
+    
+    % --- Obliczenie Modułu Younga (E) ---
+    % E = l^3 / (4 * a_reg * b * h^3)
+    l_cubed = l^3;
+    h_cubed = h^3;
+    E = l_cubed / (4 * a_reg * b * h_cubed); % Wynik w Pascalach [Pa]
+    
+    
+    % --- Obliczenie niepewności (błędu) ---
+    % Wzór: (dE/E)^2 = (3*dl/l)^2 + (da_reg/a_reg)^2 + (db/b)^2 + (3*dh/h)^2
+    
+    % Składowe błędu względnego (do kwadratu)
+    err_comp_l = (3 * delta_l / l)^2;
+    err_comp_a = (delta_a_reg / a_reg)^2;
+    err_comp_b = (delta_b / b)^2;
+    err_comp_h = (3 * delta_h / h)^2;
+    
+    % Całkowity błąd względny do kwadratu
+    total_rel_err_sq = err_comp_l + err_comp_a + err_comp_b + err_comp_h;
+    
+    % Całkowity błąd względny (dE/E)
+    total_rel_err = sqrt(total_rel_err_sq);
+    
+    % Całkowity błąd bezwzględny (Delta_E)
+    % delta_E = E * (dE/E)
+    delta_E = E * total_rel_err; % Wynik w Pascalach [Pa]
 
-plot(F_g, brass_2_mm, 'bo', 'MarkerFaceColor', 'b');
-plot(F_g, y_b2_fit, 'b-');
+    
+    % Zapisanie wyników w GigaPascalach [GPa]
+    E_vals_GPa(i) = E / 1e9;
+    delta_E_vals_GPa(i) = delta_E / 1e9;
+    
+end
 
-title('Brass Deflection vs. Force');
-xlabel('Force (N)');
-ylabel('Deflection (mm)');
-legend(str_b1, '', str_b2, '', 'Location', 'northwest');
-grid on;
-hold off;
-saveas(gcf, 'excersice_105_brass.png');
 
-disp('Slope Coefficients (a_reg):');
-fprintf('a_c1 (I_C):   %.4f\n', a_c1);
-fprintf('a_c2 (II_C):  %.4f\n', a_c2);
-fprintf('a_c3 (III_C): %.4f\n', a_c3);
-fprintf('a_a1 (IV_A):  %.4f\n', a_a1);
-fprintf('a_a2 (V_A):   %.4f\n', a_a2);
-fprintf('a_b1 (VI_B): %.4f\n', a_b1);
-fprintf('a_b2 (VII_B): %.4f\n', a_b2);
+fprintf('Obliczone wartości Modułu Younga (E) wraz z niepewnością (Delta_E):\n');
+fprintf('------------------------------------------------------------------------------\n');
+fprintf('| Belka (Bar) | E [GPa]   | Delta_E [GPa] | Wynik (E ± Delta_E) [GPa]   |\n');
+fprintf('|:------------|:----------|:--------------|:----------------------------|\n');
 
-disp('----------------------------------');
-disp('Calculating Young''s Modulus (E):');
-
-l = 0.602;
-
-b_width = [
-    0.015;  % I_C
-    0.015;  % II_C
-    0.020;  % III_C
-    0.010;  % IV_A
-    0.021;  % V_A
-    0.020;  % VI_B
-    0.015   % VII_B
-];
-
-h_thick = [
-    0.0003; % I_C
-    0.0003; % II_C
-    0.0003; % III_C
-    0.0004; % IV_A
-    0.0003; % V_A
-    0.0003; % VI_B
-    0.0003  % VII_B
-];
-
-a_reg_vec = [a_c1; a_c2; a_c3; a_a1; a_a2; a_b1; a_b2];
-
-a_reg_m_N = a_reg_vec / 1000;
-
-l_cubed = l^3;
-h_cubed = h_thick.^3;
-
-denominator = 4 .* a_reg_m_N .* b_width .* h_cubed;
-E_Pa = l_cubed ./ denominator;
-
-E_GPa = E_Pa / 1e9;
-
-E_Copper_avg = mean(E_GPa(1:3));
-E_Aluminium_avg = mean(E_GPa(4:5));
-E_Brass_avg = mean(E_GPa(6:7));
-
-% Create summary table
-Bar = {'I_C'; 'II_C'; 'III_C'; 'IV_A'; 'V_A'; 'VI_B'; 'VII_B'};
-E_GPa_Values = round(E_GPa, 2);
-Average_E_GPa = [E_Copper_avg; E_Copper_avg; E_Copper_avg; E_Aluminium_avg; E_Aluminium_avg; E_Brass_avg; E_Brass_avg];
-Average_E_GPa = round(Average_E_GPa, 2);
-
-results_table = table(Bar, E_GPa_Values, Average_E_GPa);
-results_table.Properties.VariableNames = {'Bar', 'E_GPa', 'Average_E_GPa'};
-
-disp('Calculated Young''s Modulus (E):');
-disp(results_table);
-
+for i = 1:num_bars
+    fprintf('| %-11s | %9.2f | %13.2f | (%6.2f ± %4.2f) GPa     |\n', ...
+             bar_names{i}, E_vals_GPa(i), delta_E_vals_GPa(i), ...
+             E_vals_GPa(i), delta_E_vals_GPa(i));
+end
+fprintf('------------------------------------------------------------------------------\n');
